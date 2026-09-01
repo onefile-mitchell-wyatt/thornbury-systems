@@ -1,6 +1,7 @@
 import { createServer } from 'node:http';
 import { customers, invoices, workOrders } from './db.ts';
 import { totalFor, outstandingFor } from './invoices/calc.ts';
+import { statementFor, UnknownCustomerError } from './invoices/statement.ts';
 import { dispatch } from './scheduling/dispatch.ts';
 import { slotsFor } from './scheduling/slots.ts';
 import { format } from './shared/money.ts';
@@ -25,6 +26,7 @@ export const server = createServer((req, res) => {
         'GET /customers',
         'GET /customers/:id',
         'GET /customers/:id/invoices',
+        'GET /customers/:id/statement',
         'GET /invoices/:id',
         'GET /work-orders',
         'GET /dispatch',
@@ -48,6 +50,22 @@ export const server = createServer((req, res) => {
 
   if (parts[0] === 'customers' && parts.length === 3 && parts[2] === 'invoices') {
     return json(res, 200, invoices.filter((i) => i.customerId === parts[1]));
+  }
+
+  if (parts[0] === 'customers' && parts.length === 3 && parts[2] === 'statement') {
+    try {
+      const statement = statementFor(parts[1], customers, invoices);
+      // Pence stays in the payload; a display string is added alongside so the
+      // front end can render without re-deriving money formatting.
+      return json(res, 200, {
+        ...statement,
+        invoices: statement.invoices.map((i) => ({ ...i, display: format(i.total) })),
+        outstandingDisplay: format(statement.outstanding),
+      });
+    } catch (err) {
+      if (err instanceof UnknownCustomerError) return json(res, 404, { error: 'no such customer' });
+      throw err;
+    }
   }
 
   if (parts[0] === 'invoices' && parts.length === 2) {
