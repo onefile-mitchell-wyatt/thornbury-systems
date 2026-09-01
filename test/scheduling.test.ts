@@ -22,6 +22,24 @@ test('dispatch matches the required skill', () => {
   assert.equal(backflow?.engineerId, 'E-02');
 });
 
+// JOB B: two vans, one house. Addresses are typed in by whoever takes the call,
+// so the same house comes through spelled differently. W-5001 and W-5002 are both
+// for 14 Ashfield Row on the same morning, differing only in case and spacing.
+// Exactly one van should go.
+test('one visit per address per day, even when the address is typed differently', () => {
+  const plan = dispatch(workOrders);
+  const atAshfield = plan.filter(
+    (a) => a.address.replace(/\s+/g, ' ').trim().toLowerCase() === '14 ashfield row, bristol',
+  );
+  assert.equal(
+    atAshfield.length,
+    1,
+    `expected one visit to Mrs Whitcombe's house, got ${atAshfield.length}: ${atAshfield
+      .map((a) => a.workOrderId)
+      .join(', ')}`,
+  );
+});
+
 // W-4412 and JOB D. These assert UK local values, not whatever the clock on the
 // box says, so they hold under any TZ. The old test passed only on a UK clock,
 // which is how this shipped twice.
