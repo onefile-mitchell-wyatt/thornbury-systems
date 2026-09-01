@@ -86,6 +86,30 @@ export const invoices: Invoice[] = [
       { description: 'Standing charge', quantity: 1, unitPence: 9600, kind: 'SUPPLY' },
     ],
   },
+  // Trelawney bill per site, which is why they receive several invoices for the
+  // same quarter and asked for a single statement.
+  {
+    id: 'INV-9005', customerId: 'C-1002', issued: '2026-07-01', source: 'BATCH', paid: false,
+    lines: [
+      { description: 'Metered supply, Q2, cold store Bay 2', quantity: 780, unitPence: 195, kind: 'SUPPLY' },
+      { description: 'Standing charge', quantity: 1, unitPence: 9600, kind: 'SUPPLY' },
+    ],
+  },
+  {
+    id: 'INV-9006', customerId: 'C-1002', issued: '2026-07-01', source: 'BATCH', paid: false,
+    lines: [
+      { description: 'Metered supply, Q2, vehicle wash bay', quantity: 2450, unitPence: 195, kind: 'SUPPLY' },
+      { description: 'Standing charge', quantity: 1, unitPence: 9600, kind: 'SUPPLY' },
+      { description: 'Leak detection visit', quantity: 1, unitPence: 12000, kind: 'SERVICE' },
+    ],
+  },
+  {
+    id: 'INV-9007', customerId: 'C-1002', issued: '2026-07-01', source: 'BATCH', paid: true,
+    lines: [
+      { description: 'Metered supply, Q2, Portbury depot', quantity: 310, unitPence: 195, kind: 'SUPPLY' },
+      { description: 'Standing charge', quantity: 1, unitPence: 9600, kind: 'SUPPLY' },
+    ],
+  },
 ];
 
 export const engineers: Engineer[] = [

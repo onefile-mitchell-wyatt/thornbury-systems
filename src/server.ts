@@ -1,6 +1,7 @@
 import { createServer } from 'node:http';
 import { customers, invoices, workOrders } from './db.ts';
 import { totalFor, outstandingFor } from './invoices/calc.ts';
+import { statementFor, isDateKey } from './invoices/statement.ts';
 import { dispatch } from './scheduling/dispatch.ts';
 import { slotsFor } from './scheduling/slots.ts';
 import { format } from './shared/money.ts';
@@ -25,6 +26,7 @@ export const server = createServer((req, res) => {
         'GET /customers',
         'GET /customers/:id',
         'GET /customers/:id/invoices',
+        'GET /customers/:id/statement?from=YYYY-MM-DD&to=YYYY-MM-DD',
         'GET /invoices/:id',
         'GET /work-orders',
         'GET /dispatch',
@@ -48,6 +50,24 @@ export const server = createServer((req, res) => {
 
   if (parts[0] === 'customers' && parts.length === 3 && parts[2] === 'invoices') {
     return json(res, 200, invoices.filter((i) => i.customerId === parts[1]));
+  }
+
+  if (parts[0] === 'customers' && parts.length === 3 && parts[2] === 'statement') {
+    const customer = customers.find((c) => c.id === parts[1]);
+    if (!customer) return json(res, 404, { error: 'no such customer' });
+
+    const from = url.searchParams.get('from') ?? undefined;
+    const to = url.searchParams.get('to') ?? undefined;
+    for (const [name, value] of [['from', from], ['to', to]] as const) {
+      if (value !== undefined && !isDateKey(value)) {
+        return json(res, 400, { error: `${name} must be YYYY-MM-DD`, got: value });
+      }
+    }
+    if (from && to && from > to) {
+      return json(res, 400, { error: 'from is after to', from, to });
+    }
+
+    return json(res, 200, statementFor(customer, invoices, from, to));
   }
 
   if (parts[0] === 'invoices' && parts.length === 2) {
