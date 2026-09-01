@@ -21,3 +21,14 @@ test('dispatch matches the required skill', () => {
   const backflow = plan.find((a) => a.workOrderId === 'W-5003');
   assert.equal(backflow?.engineerId, 'E-02');
 });
+
+test('dispatch sends one van per house even when the address is typed differently', () => {
+  // W-5001 "14 Ashfield Row, Bristol" and W-5002 "14 ashfield row, bristol" are
+  // the same house on the same day, hand-typed with different casing. Only one
+  // van should be planned for it.
+  const plan = dispatch(workOrders);
+  const toWhitcombe = plan.filter(
+    (a) => a.workOrderId === 'W-5001' || a.workOrderId === 'W-5002',
+  );
+  assert.equal(toWhitcombe.length, 1);
+});
