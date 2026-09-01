@@ -12,11 +12,23 @@ function canDo(engineer: Engineer, order: WorkOrder): boolean {
   return engineer.skills.includes(order.requires);
 }
 
+// Addresses are typed in by whoever takes the call, so the same house arrives
+// spelled differently: different case, stray spaces, a trailing full stop.
+// Compare on a normalised form, not the raw string.
+function normaliseAddress(address: string): string {
+  return address
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/[.,;:\s]+$/, '');
+}
+
 // One visit per address per day. Sending two vans to the same house on the same
 // morning is the single biggest source of complaints on the support queue.
 function alreadyVisiting(address: string, when: Date, planned: Assignment[]): boolean {
+  const target = normaliseAddress(address);
   return planned.some(
-    (a) => a.address === address && sameDay(new Date(a.startsAt), when),
+    (a) => normaliseAddress(a.address) === target && sameDay(new Date(a.startsAt), when),
   );
 }
 
