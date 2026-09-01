@@ -40,9 +40,12 @@ export const server = createServer((req, res) => {
   if (parts[0] === 'customers' && parts.length === 2) {
     const customer = customers.find((c) => c.id === parts[1]);
     if (!customer) return json(res, 404, { error: 'no such customer' });
+    const outstanding = outstandingFor(customer, invoices);
     return json(res, 200, {
       ...customer,
-      outstanding: format(outstandingFor(customer.id, invoices)),
+      outstanding: format(outstanding),
+      // Pence as well, so the front end stops parsing the formatted string.
+      outstandingPence: outstanding,
     });
   }
 
@@ -53,8 +56,31 @@ export const server = createServer((req, res) => {
   if (parts[0] === 'invoices' && parts.length === 2) {
     const invoice = invoices.find((i) => i.id === parts[1]);
     if (!invoice) return json(res, 404, { error: 'no such invoice' });
-    const totals = totalFor(invoice);
-    return json(res, 200, { ...invoice, ...totals, display: format(totals.total) });
+    const customer = customers.find((c) => c.id === invoice.customerId);
+    if (!customer) {
+      // The VAT rate depends on who the invoice is for, so an orphaned invoice
+      // cannot be priced. A plausible wrong number is worse than an error, and
+      // this is our data being wrong rather than the caller asking for the
+      // wrong thing, so it is a 500 and not the 404 above.
+      return json(res, 500, { error: 'invoice references an unknown customer' });
+    }
+    const totals = totalFor(invoice, customer);
+    return json(res, 200, {
+      ...invoice,
+      ...totals,
+      display: format(totals.gross),
+      // Pence stay machine-readable in 'bands'; these are the strings to print.
+      vatDisplay: {
+        net: format(totals.net),
+        vat: format(totals.vat),
+        gross: format(totals.gross),
+        bands: totals.bands.map((b) => ({
+          rate: `${b.rate}%`,
+          net: format(b.net),
+          vat: format(b.vat),
+        })),
+      },
+    });
   }
 
   if (parts[0] === 'work-orders') {

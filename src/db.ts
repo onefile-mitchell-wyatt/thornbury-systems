@@ -3,12 +3,37 @@
 
 export type CustomerId = string;
 
+// Division of the 1980 Standard Industrial Classification. The 1980 revision
+// specifically, not SIC 2007: VATA 1994 Sch 8 Group 2 pins the test to the 1980
+// classification, so a code from any other revision must be mapped before it is
+// stored here.
+//
+//   0 Agriculture, forestry and fishing    5 Construction
+//   1 Energy and water supply              6 Distribution, hotels and catering
+//   2 Minerals, metals and chemicals       7 Transport and communication
+//   3 Metal goods, engineering, vehicles   8 Banking, finance, business services
+//   4 Other manufacturing (incl. food)     9 Other services
+//
+// Divisions 1 to 5 are a 'relevant industrial activity' for VAT. Note that 0 is
+// outside that range, so a farm still gets zero-rated water.
+export type SicDivision = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+
 export interface Customer {
   id: CustomerId;
   name: string;
   address: string;
   accountType: 'DOMESTIC' | 'COMMERCIAL';
+  // Whether the customer is registered for VAT themselves. This governs what
+  // they can reclaim, not what we charge them, and must not be read by the rate
+  // calculation. See src/invoices/vat.ts.
   vatRegistered: boolean;
+  // The customer's predominant business activity across all of their sites, not
+  // the activity at this address and not what the water is actually used for
+  // (HMRC VWASS2200, VWASS2600). null means no business activity.
+  //
+  // Required rather than optional on purpose: this field decides a tax rate, so
+  // 'this is a household' and 'nobody has filled this in' must not look alike.
+  sicDivision: SicDivision | null;
 }
 
 export interface LineItem {
@@ -49,10 +74,14 @@ export interface WorkOrder {
 }
 
 export const customers: Customer[] = [
-  { id: 'C-1001', name: 'Mrs J Whitcombe', address: '14 Ashfield Row, Bristol', accountType: 'DOMESTIC', vatRegistered: false },
-  { id: 'C-1002', name: 'Trelawney Foods Ltd', address: 'Unit 6, Severnside Park, Avonmouth', accountType: 'COMMERCIAL', vatRegistered: true },
-  { id: 'C-1003', name: 'Dr A Kowalski', address: '2 Bell Lane, Thornbury', accountType: 'DOMESTIC', vatRegistered: false },
-  { id: 'C-1004', name: 'Severn Vale Academy', address: 'Gloucester Road, Thornbury', accountType: 'COMMERCIAL', vatRegistered: true },
+  { id: 'C-1001', name: 'Mrs J Whitcombe', address: '14 Ashfield Row, Bristol', accountType: 'DOMESTIC', vatRegistered: false, sicDivision: null },
+  // Food manufacturing, so SIC 1980 Division 4 and a relevant industrial
+  // activity: their water falls outside the Group 2 zero rating.
+  { id: 'C-1002', name: 'Trelawney Foods Ltd', address: 'Unit 6, Severnside Park, Avonmouth', accountType: 'COMMERCIAL', vatRegistered: true, sicDivision: 4 },
+  { id: 'C-1003', name: 'Dr A Kowalski', address: '2 Bell Lane, Thornbury', accountType: 'DOMESTIC', vatRegistered: false, sicDivision: null },
+  // A school. Division 9, other services, so not industrial: their water is
+  // zero-rated even though the account is commercial and they are VAT registered.
+  { id: 'C-1004', name: 'Severn Vale Academy', address: 'Gloucester Road, Thornbury', accountType: 'COMMERCIAL', vatRegistered: true, sicDivision: 9 },
 ];
 
 export const invoices: Invoice[] = [
