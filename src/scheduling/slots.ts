@@ -1,4 +1,4 @@
-import { formatSlotTime } from '../shared/dates.ts';
+import { formatSlotTime, formatSlotDate } from '../shared/dates.ts';
 import type { WorkOrder } from '../db.ts';
 
 export interface Slot {
@@ -26,7 +26,9 @@ export function slotFor(order: WorkOrder): Slot {
   return {
     workOrderId: order.id,
     window: `${formatSlotTime(from)} to ${formatSlotTime(to)}`,
-    date: order.requestedAt.slice(0, 10),
+    // The customer's local calendar day. requestedAt.slice(0, 10) is the UTC day,
+    // which is a day early for an out-of-hours slot stored just before midnight.
+    date: formatSlotDate(start),
   };
 }
 

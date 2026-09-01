@@ -29,11 +29,37 @@ export function addWorkingDays(from: Date, n: number): Date {
   return d;
 }
 
-// What the customer is told their appointment time is.
+// The customer sees UK local time, always. getHours()/getMinutes() read the
+// PROCESS timezone, so this rendered UTC on the build box and any non-UK server
+// (an hour out in BST, a whole day out at a day boundary) while looking fine on a
+// UK dev machine. Format Europe/London explicitly so the output no longer depends
+// on where the code runs.
+const LONDON_TIME = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Europe/London',
+  hour12: false,
+  hour: '2-digit',
+  minute: '2-digit',
+});
+
+// What the customer is told their appointment time is. UK local, HH:MM.
 export function formatSlotTime(d: Date): string {
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mm = String(d.getMinutes()).padStart(2, '0');
-  return `${hh}:${mm}`;
+  // en-GB renders midnight as '00:00'; guard the rare '24:00' just in case.
+  return LONDON_TIME.format(d).replace(/^24:/, '00:');
+}
+
+// The customer-facing calendar date for an instant, in UK local time. YYYY-MM-DD.
+// Uses the Europe/London day, not the UTC day (toDateKey / toISOString), so an
+// out-of-hours slot stored just before midnight UTC shows the correct local day.
+const LONDON_DATE = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Europe/London',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+export function formatSlotDate(d: Date): string {
+  // en-CA formats as YYYY-MM-DD.
+  return LONDON_DATE.format(d);
 }
 
 export function sameDay(a: Date, b: Date): boolean {
