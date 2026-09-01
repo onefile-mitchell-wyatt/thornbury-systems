@@ -61,6 +61,8 @@ export const server = createServer((req, res) => {
     return json(res, 200, workOrders);
   }
 
+  // { plan, suppressed }. The suppressed list is new: a work order the
+  // dispatcher passes over used to just not appear in the response.
   if (parts[0] === 'dispatch') {
     return json(res, 200, dispatch(workOrders));
   }
